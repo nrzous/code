@@ -1,0 +1,120 @@
+@author: nrzous
+"""
+
+from mpmath import *
+from sympy import *
+from array import *
+import sympy
+import math
+
+S_O = 0.25
+for i in range(0,11):
+    xf = 1
+    W_O = 1
+    M = 20
+    N = 8
+    R = 150
+    tau_trC = 1
+    lambda_i = 2
+    mu_i = 4
+    mu_F = 6
+    mu_C = 10
+    inf_s = 3
+    inf_w = 7.6
+    ro_i = lambda_i/mu_i
+    a = 0.25
+    b = 0.75
+    
+
+    s = sympy.symbols('s')
+    x = sympy.symbols('x')
+    w = sympy.symbols('w')
+    y = sympy.symbols('y')
+    z = sympy.symbols('z')
+    
+    
+    def fw(w):
+        return w*exp(-w/0.75)/0.75**2
+    
+    def fws(w):
+        return (w*w*exp(-w/0.75)/0.75**2)
+    
+    def fs(s):
+        return s*exp(-s/0.25)/0.25**2
+    
+    
+    Pi_i = sympy.integrate(fw(w), (w, W_O, sympy.oo))*sympy.integrate(fs(s), (s, 0, S_O))
+    lambda_MD = lambda_i*(1-Pi_i)
+    
+    diff_B_MD_z = (-(B_MD(0.01)-B_MD(-0.01))/0.02)
+    ro_i = diff_B_MD_z*lambda_MD
+    
+    lambda_F = 0
+    for i in range(1,M+1):
+        lambda_F = lambda_F + lambda_i*Pi_i
+        
+    tau_F = 0
+    tau_F = sympy.integrate((1-(1/Pi_i)*sympy.integrate(fw(w), (w, W_O, mu_F*x))*sympy.integrate(fs(s), (s, 0, S_O))),(x, W_O/mu_F, 100000)) + sympy.integrate(1,(x,0,W_O/mu_F))
+    
+    tau_C = 0
+    tau_C = sympy.integrate((1-(1/Pi_i)*sympy.integrate(fw(w), (w, W_O, mu_C*x))*sympy.integrate(fs(s), (s, 0, S_O))),(x, W_O/mu_C, 100000)) + sympy.integrate(1,(x,0,W_O/mu_C))
+    
+    counter = 0
+    for k in range(0,N+1):
+        counter = counter + (lambda_F*tau_F)**k/math.factorial(k)
+    
+    Pi_F = (((lambda_F*tau_F)**N)/math.factorial(N))*counter**(-1)
+    
+    c = W_O/mu_i
+    d = mu_i/b
+    ttt = (1-exp(-S_O/a)*(1+S_O/a))**(-1)
+    
+    
+    def B_MD(qq):
+        return((1/(1-Pi_i))*((mu_i**2)/(qq*b+mu_i)**2 - (1- exp(-S_O/a)*(1+S_O/a))*exp(-(qq*W_O/mu_i+W_O/b))*((mu_i*W_O*(qq*b+mu_i)+b*mu_i**2)/(b*(qq*b+mu_i)**2))))
+    
+    lambda_MD = lambda_i*(1-Pi_i)
+    
+    diff_B_MD_z = (-(B_MD(0.01)-B_MD(-0.01))/0.02)
+    ro_i = diff_B_MD_z*lambda_MD
+    
+    def O_MD(qq):
+        return((qq*(1-ro_i))/(qq-lambda_MD+lambda_MD*B_MD(qq)))
+    
+    def PHI_MD_PL(qq):
+        return(B_MD(qq)*O_MD(qq))
+    
+    def B_WN(qq):
+        return(ttt*((R**2)/(a*qq+R)**2 - exp(-(qq*S_O/R + S_O/a))*((qq*a+R)*R*S_O+a*R**2)/(a*(qq*a+R)**2)))
+    
+    lambda_WN = 2*lambda_F
+    ro_WN = lambda_WN*(-(B_WN(0.01)-B_WN(-0.01))/0.02)
+    
+    def O_WN(qq):
+        return((qq*(1-ro_WN))/(qq-lambda_WN+lambda_WN*B_WN(qq)))
+    
+    def PHI_WN(qq):
+        return(B_WN(qq)*O_WN(qq))
+    
+    def B_F(qq):
+        return(exp(-qq*W_O/mu_F)*(mu_F*W_O*(qq*b+mu_F)+b*mu_F**2)/((b+W_O)*(qq*b+mu_F)**2))
+    
+    def B_C(qq):
+        return(exp(-qq*W_O/mu_C)*(mu_C*W_O*(qq*b+mu_C)+b*mu_C**2)/((b+W_O)*(qq*b+mu_C)**2))
+    
+    def Tay(qq):
+        return(exp(-qq))
+    
+    
+    
+    PLF = lambda qq: ((1-Pi_i)*PHI_MD_PL(qq) + Pi_i*(1-Pi_F)*(B_F(qq))*(PHI_WN(qq)**2) + Pi_i*Pi_F*(B_C(qq))*(PHI_WN(qq)**2)*(Tay(qq))**2)/qq
+      
+    mp.dps = 30#число членов, используемых в приближении
+    mp.pretty = True
+    def F2(x):
+        return(invertlaplace(PLF, x, method='stehfest'))
+    
+    print(F2(xf))
+    
+    S_O = S_O + 0.05
+    
